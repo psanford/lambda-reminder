@@ -10,7 +10,7 @@ import (
 )
 
 func TestGetDestinationsForRule(t *testing.T) {
-	lgr := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	lgr := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	sender := NewSender(nil, nil, lgr)
 
 	allDestinations := []config.Destination{
@@ -73,7 +73,7 @@ func TestGetDestinationsForRule(t *testing.T) {
 }
 
 func TestSendNotifications(t *testing.T) {
-	lgr := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	lgr := slog.New(slog.NewTextHandler(os.Stderr, nil))
 
 	// Create mock clients - in a real test we'd use proper mocks
 	sender := NewSender(nil, nil, lgr)

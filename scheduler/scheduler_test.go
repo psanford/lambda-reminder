@@ -11,7 +11,7 @@ import (
 )
 
 func TestValidateRule(t *testing.T) {
-	lgr := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	lgr := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	s := New(lgr)
 
 	tests := []struct {
@@ -72,7 +72,7 @@ func TestValidateRule(t *testing.T) {
 }
 
 func TestGetNextRunTime(t *testing.T) {
-	lgr := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	lgr := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	s := New(lgr)
 
 	// Test time: 2024-01-15 08:00:00 (Monday)
@@ -200,7 +200,7 @@ func TestGetNextRunTime(t *testing.T) {
 }
 
 func TestIsDue(t *testing.T) {
-	lgr := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	lgr := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	s := New(lgr)
 
 	now := time.Date(2024, 1, 15, 9, 0, 0, 0, time.UTC)
@@ -260,7 +260,7 @@ func TestIsDue(t *testing.T) {
 }
 
 func TestGetDueRules(t *testing.T) {
-	lgr := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	lgr := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	s := New(lgr)
 
 	now := time.Date(2024, 1, 15, 9, 0, 0, 0, time.UTC)
@@ -348,7 +348,7 @@ func TestGetDueRules(t *testing.T) {
 }
 
 func TestUpdateRuleState(t *testing.T) {
-	lgr := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	lgr := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	s := New(lgr)
 
 	st := &state.State{
@@ -393,7 +393,7 @@ func TestUpdateRuleState(t *testing.T) {
 }
 
 func TestCronExpressionChange(t *testing.T) {
-	lgr := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	lgr := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	s := New(lgr)
 
 	now := time.Date(2024, 1, 15, 9, 0, 0, 0, time.UTC)
@@ -451,7 +451,7 @@ func TestCronExpressionChange(t *testing.T) {
 }
 
 func TestNewRuleInitialization(t *testing.T) {
-	lgr := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	lgr := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	s := New(lgr)
 
 	// Current time: 2024-01-15 08:00:00 (Monday)
@@ -535,7 +535,7 @@ func TestNewRuleInitialization(t *testing.T) {
 }
 
 func TestNewRuleBecomesDue(t *testing.T) {
-	lgr := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	lgr := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	s := New(lgr)
 
 	// Set up times for the test
