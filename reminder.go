@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sesv2"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	appConfig "github.com/psanford/lambda-reminder/config"
+	"github.com/psanford/lambda-reminder/notifications"
 	"github.com/psanford/lambda-reminder/scheduler"
 	"github.com/psanford/lambda-reminder/state"
 )
@@ -72,10 +73,20 @@ func (h *handler) Handler(ctx context.Context, evt events.CloudWatchEvent) error
 
 	h.lgr.Info("due rules found", "count", len(dueRules))
 
+	notificationSender := notifications.NewSender(h.snsClient, h.sesClient, h.lgr)
+
 	for _, rule := range dueRules {
 		h.lgr.Info("processing rule", "rule", rule.Name, "cron", rule.Cron)
 
-		// TODO: Send notifications to destinations
+		// Get destinations for this rule
+		ruleDestinations := notificationSender.GetDestinationsForRule(rule, conf.Destinations)
+
+		// Send notifications
+		err = notificationSender.SendNotifications(ctx, rule, ruleDestinations)
+		if err != nil {
+			h.lgr.Error("send notifications error", "rule", rule.Name, "err", err)
+			// Continue processing other rules even if this one fails
+		}
 
 		err = sched.UpdateRuleState(st, rule.Name, rule.Cron, now)
 		if err != nil {
