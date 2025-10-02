@@ -40,32 +40,52 @@ func getStateLocation() (bucket, key string, err error) {
 	return bucket, key, nil
 }
 
-func LoadState(ctx context.Context, s3Client *s3.Client, lgr *slog.Logger) (*State, error) {
-	bucket, key, err := getStateLocation()
-	if err != nil {
-		return nil, err
-	}
+func LoadState(ctx context.Context, s3Client *s3.Client, lgr *slog.Logger, localStatePath string) (*State, error) {
+	var state State
 
-	lgr.Info("loading state", "bucket", bucket, "key", key)
+	if localStatePath != "" {
+		lgr.Info("loading local state", "path", localStatePath)
+		f, err := os.Open(localStatePath)
 
-	result, err := s3Client.GetObject(ctx, &s3.GetObjectInput{
-		Bucket: &bucket,
-		Key:    &key,
-	})
-	if err != nil {
-		var apiErr smithy.APIError
-		if ok := errors.As(err, &apiErr); ok && apiErr.ErrorCode() == "NoSuchKey" {
+		if errors.Is(err, os.ErrNotExist) {
 			lgr.Info("state file does not exist, starting with empty state")
 			return &State{Rules: make(map[string]RuleState)}, nil
+		} else if err != nil {
+			return nil, fmt.Errorf("load local state file err %w", err)
 		}
-		return nil, fmt.Errorf("get state from s3: %w", err)
-	}
-	defer result.Body.Close()
 
-	var state State
-	err = json.NewDecoder(result.Body).Decode(&state)
-	if err != nil {
-		return nil, fmt.Errorf("decode state: %w", err)
+		defer f.Close()
+
+		err = json.NewDecoder(f).Decode(&state)
+		if err != nil {
+			return nil, fmt.Errorf("decode state: %w", err)
+		}
+	} else {
+		bucket, key, err := getStateLocation()
+		if err != nil {
+			return nil, err
+		}
+
+		lgr.Info("loading state", "bucket", bucket, "key", key)
+
+		result, err := s3Client.GetObject(ctx, &s3.GetObjectInput{
+			Bucket: &bucket,
+			Key:    &key,
+		})
+		if err != nil {
+			var apiErr smithy.APIError
+			if ok := errors.As(err, &apiErr); ok && apiErr.ErrorCode() == "NoSuchKey" {
+				lgr.Info("state file does not exist, starting with empty state")
+				return &State{Rules: make(map[string]RuleState)}, nil
+			}
+			return nil, fmt.Errorf("get state from s3: %w", err)
+		}
+		defer result.Body.Close()
+
+		err = json.NewDecoder(result.Body).Decode(&state)
+		if err != nil {
+			return nil, fmt.Errorf("decode state: %w", err)
+		}
 	}
 
 	if state.Rules == nil {
@@ -76,26 +96,35 @@ func LoadState(ctx context.Context, s3Client *s3.Client, lgr *slog.Logger) (*Sta
 	return &state, nil
 }
 
-func SaveState(ctx context.Context, s3Client *s3.Client, state *State, lgr *slog.Logger) error {
-	bucket, key, err := getStateLocation()
-	if err != nil {
-		return err
-	}
+func SaveState(ctx context.Context, s3Client *s3.Client, state *State, lgr *slog.Logger, localStatePath string) error {
 
-	lgr.Info("saving state", "bucket", bucket, "key", key, "rule_count", len(state.Rules))
+	lgr.Info("saving state", "rule_count", len(state.Rules))
 
 	data, err := json.MarshalIndent(state, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal state: %w", err)
 	}
 
-	_, err = s3Client.PutObject(ctx, &s3.PutObjectInput{
-		Bucket: &bucket,
-		Key:    &key,
-		Body:   bytes.NewReader(data),
-	})
-	if err != nil {
-		return fmt.Errorf("put state to s3: %w", err)
+	if localStatePath != "" {
+		err := os.WriteFile(localStatePath, data, 0600)
+		if err != nil {
+			return fmt.Errorf("create local state file: %w", err)
+		}
+	} else {
+
+		bucket, key, err := getStateLocation()
+		if err != nil {
+			return err
+		}
+
+		_, err = s3Client.PutObject(ctx, &s3.PutObjectInput{
+			Bucket: &bucket,
+			Key:    &key,
+			Body:   bytes.NewReader(data),
+		})
+		if err != nil {
+			return fmt.Errorf("put state to s3: %w", err)
+		}
 	}
 
 	lgr.Info("state saved successfully")
