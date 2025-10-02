@@ -11,8 +11,8 @@ import (
 )
 
 type Config struct {
-	Rules        []Rule        `toml:"rules"`
-	Destinations []Destination `toml:"destinations"`
+	Rules        []Rule        `toml:"rule"`
+	Destinations []Destination `toml:"destination"`
 }
 
 type Rule struct {
@@ -40,35 +40,49 @@ type Destination struct {
 	FromEmail string `toml:"from_email"`
 }
 
-func LoadConfig(ctx context.Context, s3Client *s3.Client, lgr *slog.Logger) (*Config, error) {
-	bucketName := os.Getenv("S3_CONFIG_BUCKET")
-	if bucketName == "" {
-		return nil, fmt.Errorf("S3_CONFIG_BUCKET environment variable not set")
-	}
-
-	confPath := os.Getenv("S3_CONFIG_PATH")
-	if confPath == "" {
-		return nil, fmt.Errorf("S3_CONFIG_PATH environment variable not set")
-	}
-
-	lgr.Info("loading config", "bucket", bucketName, "path", confPath)
-
-	confResp, err := s3Client.GetObject(ctx, &s3.GetObjectInput{
-		Bucket: &bucketName,
-		Key:    &confPath,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("get config from s3: %w", err)
-	}
-	defer confResp.Body.Close()
-
+func LoadConfig(ctx context.Context, s3Client *s3.Client, lgr *slog.Logger, configPath string) (*Config, error) {
 	var conf Config
-	_, err = toml.NewDecoder(confResp.Body).Decode(&conf)
-	if err != nil {
-		return nil, fmt.Errorf("decode config: %w", err)
+	if configPath != "" {
+		lgr.Info("loading local config", "path", configPath)
+
+		f, err := os.Open(configPath)
+		if err != nil {
+			return nil, fmt.Errorf("open config file err %w", err)
+		}
+		defer f.Close()
+		_, err = toml.NewDecoder(f).Decode(&conf)
+		if err != nil {
+			return nil, fmt.Errorf("decode config: %w", err)
+		}
+	} else {
+		bucketName := os.Getenv("S3_CONFIG_BUCKET")
+		if bucketName == "" {
+			return nil, fmt.Errorf("S3_CONFIG_BUCKET environment variable not set")
+		}
+
+		confPath := os.Getenv("S3_CONFIG_PATH")
+		if confPath == "" {
+			return nil, fmt.Errorf("S3_CONFIG_PATH environment variable not set")
+		}
+
+		lgr.Info("loading config", "bucket", bucketName, "path", confPath)
+
+		confResp, err := s3Client.GetObject(ctx, &s3.GetObjectInput{
+			Bucket: &bucketName,
+			Key:    &confPath,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("get config from s3: %w", err)
+		}
+		defer confResp.Body.Close()
+
+		_, err = toml.NewDecoder(confResp.Body).Decode(&conf)
+		if err != nil {
+			return nil, fmt.Errorf("decode config: %w", err)
+		}
 	}
 
-	err = validateConfig(&conf)
+	err := validateConfig(&conf)
 	if err != nil {
 		return nil, fmt.Errorf("validate config: %w", err)
 	}
@@ -129,6 +143,8 @@ func validateDestination(dest *Destination) error {
 		if len(dest.ToEmails) == 0 {
 			return fmt.Errorf("to_emails is required for ses destination")
 		}
+	case "log":
+		return nil
 	default:
 		return fmt.Errorf("unsupported destination type: %s", dest.Type)
 	}
