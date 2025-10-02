@@ -42,6 +42,8 @@ func (n *NotificationSender) SendNotifications(ctx context.Context, rule config.
 			err = n.sendSES(ctx, rule, dest)
 		case "slack_webhook":
 			err = n.sendSlackWebhook(ctx, rule, dest)
+		case "log":
+			n.lgr.Info("log notification event", "subject", rule.Subject, "body", rule.Body)
 		default:
 			err = fmt.Errorf("unsupported destination type: %s", dest.Type)
 		}
