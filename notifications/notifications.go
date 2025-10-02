@@ -55,11 +55,6 @@ func (n *NotificationSender) SendNotifications(ctx context.Context, rule config.
 				"type", dest.Type,
 				"err", err)
 			errors = append(errors, fmt.Errorf("destination %s: %w", dest.ID, err))
-		} else {
-			n.lgr.Info("notification sent successfully",
-				"rule", rule.Name,
-				"destination", dest.ID,
-				"type", dest.Type)
 		}
 	}
 

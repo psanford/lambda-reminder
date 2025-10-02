@@ -44,7 +44,6 @@ func LoadState(ctx context.Context, s3Client *s3.Client, lgr *slog.Logger, local
 	var state State
 
 	if localStatePath != "" {
-		lgr.Info("loading local state", "path", localStatePath)
 		f, err := os.Open(localStatePath)
 
 		if errors.Is(err, os.ErrNotExist) {
@@ -65,8 +64,6 @@ func LoadState(ctx context.Context, s3Client *s3.Client, lgr *slog.Logger, local
 		if err != nil {
 			return nil, err
 		}
-
-		lgr.Info("loading state", "bucket", bucket, "key", key)
 
 		result, err := s3Client.GetObject(ctx, &s3.GetObjectInput{
 			Bucket: &bucket,
@@ -92,14 +89,10 @@ func LoadState(ctx context.Context, s3Client *s3.Client, lgr *slog.Logger, local
 		state.Rules = make(map[string]RuleState)
 	}
 
-	lgr.Info("state loaded", "rule_count", len(state.Rules))
 	return &state, nil
 }
 
 func SaveState(ctx context.Context, s3Client *s3.Client, state *State, lgr *slog.Logger, localStatePath string) error {
-
-	lgr.Info("saving state", "rule_count", len(state.Rules))
-
 	data, err := json.MarshalIndent(state, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal state: %w", err)
@@ -127,6 +120,5 @@ func SaveState(ctx context.Context, s3Client *s3.Client, state *State, lgr *slog
 		}
 	}
 
-	lgr.Info("state saved successfully")
 	return nil
 }

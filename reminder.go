@@ -30,8 +30,6 @@ func main() {
 	lgr := slog.New(slog.NewJSONHandler(os.Stderr, nil))
 	slog.SetDefault(lgr)
 
-	lgr.Info("starting")
-
 	ctx := context.Background()
 	cfg, err := awsconfig.LoadDefaultConfig(ctx)
 	if err != nil {
@@ -67,8 +65,6 @@ func (h *handler) Handler(ctx context.Context, evt events.CloudWatchEvent) error
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	h.lgr.Info("config loaded", "rules", len(conf.Rules), "destinations", len(conf.Destinations))
-
 	st, err := state.LoadState(ctx, h.s3Client, h.lgr, *statePath)
 	if err != nil {
 		return fmt.Errorf("load state: %w", err)
@@ -82,15 +78,11 @@ func (h *handler) Handler(ctx context.Context, evt events.CloudWatchEvent) error
 		return fmt.Errorf("get due rules: %w", err)
 	}
 
-	h.lgr.Info("due rules found", "count", len(dueRules))
-
 	notificationSender := notifications.NewSender(h.snsClient, h.sesClient, h.lgr)
 
 	var errs []error
 
 	for _, rule := range dueRules {
-		h.lgr.Info("processing rule", "rule", rule.Name, "cron", rule.Cron)
-
 		// Get destinations for this rule
 		ruleDestinations := notificationSender.GetDestinationsForRule(rule, conf.Destinations)
 
@@ -115,10 +107,7 @@ func (h *handler) Handler(ctx context.Context, evt events.CloudWatchEvent) error
 		return fmt.Errorf("save state: %w", err)
 	}
 
-	h.lgr.Info("processing complete", "processed_rules", len(dueRules))
-
 	if len(errs) > 0 {
-		h.lgr.Info("processing errors", "errs", errs)
 		return fmt.Errorf("processing errors %+v", errs)
 
 	}

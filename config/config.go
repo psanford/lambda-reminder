@@ -43,7 +43,6 @@ type Destination struct {
 func LoadConfig(ctx context.Context, s3Client *s3.Client, lgr *slog.Logger, configPath string) (*Config, error) {
 	var conf Config
 	if configPath != "" {
-		lgr.Info("loading local config", "path", configPath)
 
 		f, err := os.Open(configPath)
 		if err != nil {
@@ -65,8 +64,6 @@ func LoadConfig(ctx context.Context, s3Client *s3.Client, lgr *slog.Logger, conf
 			return nil, fmt.Errorf("S3_CONFIG_PATH environment variable not set")
 		}
 
-		lgr.Info("loading config", "bucket", bucketName, "path", confPath)
-
 		confResp, err := s3Client.GetObject(ctx, &s3.GetObjectInput{
 			Bucket: &bucketName,
 			Key:    &confPath,
@@ -87,7 +84,6 @@ func LoadConfig(ctx context.Context, s3Client *s3.Client, lgr *slog.Logger, conf
 		return nil, fmt.Errorf("validate config: %w", err)
 	}
 
-	lgr.Info("config loaded", "rules", len(conf.Rules), "destinations", len(conf.Destinations))
 	return &conf, nil
 }
 

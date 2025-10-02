@@ -79,8 +79,6 @@ func (s *Scheduler) GetDueRules(conf *config.Config, st *state.State, now time.T
 				NextRunTime: nextRun,
 			}
 
-			s.lgr.Info("created initial state for new rule",
-				"rule", rule.Name, "next_run", nextRun)
 			continue
 		}
 
@@ -106,16 +104,11 @@ func (s *Scheduler) GetDueRules(conf *config.Config, st *state.State, now time.T
 				NextRunTime: nextRun,
 			}
 
-			s.lgr.Info("updated rule state for cron change",
-				"rule", rule.Name, "next_run", nextRun)
 			continue
 		}
 
 		if s.IsDue(rule.Cron, ruleState.LastRunTime, ruleState.NextRunTime, now) {
-			s.lgr.Info("rule is due", "rule", rule.Name, "next_run", ruleState.NextRunTime, "now", now)
 			dueRules = append(dueRules, rule)
-		} else {
-			s.lgr.Debug("rule not due", "rule", rule.Name, "next_run", ruleState.NextRunTime, "now", now)
 		}
 	}
 
@@ -135,6 +128,5 @@ func (s *Scheduler) UpdateRuleState(st *state.State, ruleName, cronExpr string, 
 		NextRunTime: nextRun,
 	}
 
-	s.lgr.Info("updated rule state", "rule", ruleName, "cron", cronExpr, "last_run", runTime, "next_run", nextRun)
 	return nil
 }
