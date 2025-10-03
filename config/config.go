@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -13,6 +14,7 @@ import (
 type Config struct {
 	Rules        []Rule        `toml:"rule"`
 	Destinations []Destination `toml:"destination"`
+	Timezone     string        `toml:"timezone"`
 }
 
 type Rule struct {
@@ -116,6 +118,13 @@ func validateConfig(conf *Config) error {
 		err := validateRule(&rule, destMap)
 		if err != nil {
 			return fmt.Errorf("rule %s: %w", rule.Name, err)
+		}
+	}
+
+	if conf.Timezone != "" {
+		_, err := time.LoadLocation(conf.Timezone)
+		if err != nil {
+			return fmt.Errorf("invalid timezone: %w", err)
 		}
 	}
 

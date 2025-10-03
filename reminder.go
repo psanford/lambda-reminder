@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"time"
+	_ "time/tzdata"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -72,6 +73,15 @@ func (h *handler) Handler(ctx context.Context, evt events.CloudWatchEvent) error
 
 	sched := scheduler.New(h.lgr)
 	now := time.Now()
+
+	var location *time.Location
+	if conf.Timezone != "" {
+		location, err = time.LoadLocation(conf.Timezone)
+		if err != nil {
+			return fmt.Errorf("invalid timezone %s: %w", conf.Timezone, err)
+		}
+		now = now.In(location)
+	}
 
 	dueRules, err := sched.GetDueRules(conf, st, now)
 	if err != nil {
